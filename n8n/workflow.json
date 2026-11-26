@@ -1,5 +1,5 @@
 {
-  "name": "MY Buyer Co-Pilot — HITL State Machine",
+  "name": "MY Buyer Co-Pilot \u2014 HITL State Machine",
   "nodes": [
     {
       "id": "fcfcdb45-3cb1-5302-91aa-ae7c8e1efba8",
@@ -152,7 +152,7 @@
         200
       ],
       "parameters": {
-        "jsCode": "\n// Plain-language card for the HITL console. Numbers are copied verbatim from the engine\n// (strings, exact decimals) — this node never does money arithmetic.\nconst txn = $('Load Transaction').item.json.transaction;\nconst vet = $input.first().json;\nconst NEXT = {\n  HITL_1_LISTING_VETTING: ['Order Official Title Search (Carian Rasmi)', 'Site visit: boundary, access, renovations', 'Request valuation'],\n  HITL_2_OFFER_BUDGET: ['Confirm loan pre-approval', 'Issue written offer subject to contract', 'Shortlist conveyancing lawyers'],\n  HITL_3_LAWYER_DEPOSIT: ['Appoint lawyer (check practising certificate)', 'Pay deposit ONLY to lawyer client account as stakeholder', 'Obtain written receipt'],\n  HITL_4_SPA_LOAN_DUTY: ['Sign SPA & loan docs with lawyer', 'Stamp MOT and loan agreement via STAMPS', 'Track state consent / redemption'],\n  HITL_5_TRANSFER_HANDOVER: ['Confirm MOT (Borang 14A) registered', 'Vacant possession checklist & keys', 'Transfer utilities; settle apportionments'],\n};\nreturn [{ json: {\n  transaction_id: txn.id, gate: txn.stage, version: txn.version,\n  summary: {\n    headline: vet.blocking ? 'Blocking risks must be resolved before you can approve.' : 'Ready for your review.',\n    ruleset_version: vet.cost.ruleset_version,\n    cash_at_signing: vet.cost.cash_at_signing,\n    total_cash_to_completion: vet.cost.total_cash_to_completion,\n    mot_duty: vet.cost.mot_duty, loan_duty: vet.cost.loan_duty,\n    exemption_applied: vet.cost.exemption_applied,\n    proposed_scenario: vet.cost.proposed_scenario,\n    line_items: vet.cost.line_items,\n    next_actions: NEXT[txn.stage] ?? [],\n    disclaimer: vet.disclaimer,\n  },\n  flags: vet.flags.map(f => ({ code: String(f.code), severity: String(f.severity), title_en: String(f.title_en ?? ''),\n    title_ms: String(f.title_ms ?? ''), message: String(f.message ?? ''), next_step: String(f.next_step ?? '') })),\n} }];\n"
+        "jsCode": "\n// Plain-language card for the HITL console. Numbers are copied verbatim from the engine\n// (strings, exact decimals) \u2014 this node never does money arithmetic.\nconst txn = $('Load Transaction').item.json.transaction;\nconst vet = $input.first().json;\nconst NEXT = {\n  HITL_1_LISTING_VETTING: ['Order Official Title Search (Carian Rasmi)', 'Site visit: boundary, access, renovations', 'Request valuation'],\n  HITL_2_OFFER_BUDGET: ['Confirm loan pre-approval', 'Issue written offer subject to contract', 'Shortlist conveyancing lawyers'],\n  HITL_3_LAWYER_DEPOSIT: ['Appoint lawyer (check practising certificate)', 'Pay deposit ONLY to lawyer client account as stakeholder', 'Obtain written receipt'],\n  HITL_4_SPA_LOAN_DUTY: ['Sign SPA & loan docs with lawyer', 'Stamp MOT and loan agreement via STAMPS', 'Track state consent / redemption'],\n  HITL_5_TRANSFER_HANDOVER: ['Confirm MOT (Borang 14A) registered', 'Vacant possession checklist & keys', 'Transfer utilities; settle apportionments'],\n};\nreturn [{ json: {\n  transaction_id: txn.id, gate: txn.stage, version: txn.version,\n  summary: {\n    headline: vet.blocking ? 'Blocking risks must be resolved before you can approve.' : 'Ready for your review.',\n    ruleset_version: vet.cost.ruleset_version,\n    cash_at_signing: vet.cost.cash_at_signing,\n    total_cash_to_completion: vet.cost.total_cash_to_completion,\n    mot_duty: vet.cost.mot_duty, loan_duty: vet.cost.loan_duty,\n    exemption_applied: vet.cost.exemption_applied,\n    proposed_scenario: vet.cost.proposed_scenario,\n    line_items: vet.cost.line_items,\n    next_actions: NEXT[txn.stage] ?? [],\n    disclaimer: vet.disclaimer,\n  },\n  flags: vet.flags.map(f => ({ code: String(f.code), severity: String(f.severity), title_en: String(f.title_en ?? ''),\n    title_ms: String(f.title_ms ?? ''), message: String(f.message ?? ''), next_step: String(f.next_step ?? '') })),\n} }];\n"
       }
     },
     {
@@ -285,7 +285,7 @@
         200
       ],
       "parameters": {
-        "jsCode": "\n// Zero trust: the resume webhook payload is only a hint. The decision is accepted only if\n// the engine/DB holds a matching, hash-chain-valid approval record for this gate.\nconst hint = $('Wait for Human Decision').item.json.body ?? {};\nconst state = $input.first().json;\nconst gate = $('Build Gate Summary').item.json.gate;\nif (!hint.approval_id) {\n  // Timed out after 30 days with no human decision: do nothing automatically.\n  return [{ json: { decision: 'TIMEOUT', transaction_id: state.transaction?.id, gate } }];\n}\nif (!state.audit_chain_valid) throw new Error('AUDIT CHAIN INVALID — halting for investigation');\nconst rec = (state.approvals ?? []).find(a => a.id === hint.approval_id);\nif (!rec || rec.gate !== gate || rec.row_hash !== hint.row_hash || rec.decision !== hint.decision) {\n  throw new Error('Decision not found in audit log or mismatched — refusing to act');\n}\nreturn [{ json: { decision: rec.decision, approval_id: rec.id, row_hash: rec.row_hash, gate,\n                  transaction_id: state.transaction.id, status: state.transaction.status,\n                  next_stage: state.transaction.stage } }];\n"
+        "jsCode": "\n// Zero trust: the resume webhook payload is only a hint. The decision is accepted only if\n// the engine/DB holds a matching, hash-chain-valid approval record for this gate.\nconst hint = $('Wait for Human Decision').item.json.body ?? {};\nconst state = $input.first().json;\nconst gate = $('Build Gate Summary').item.json.gate;\nif (!hint.approval_id) {\n  // Timed out after 30 days with no human decision: do nothing automatically.\n  return [{ json: { decision: 'TIMEOUT', transaction_id: state.transaction?.id, gate } }];\n}\nif (!state.audit_chain_valid) throw new Error('AUDIT CHAIN INVALID \u2014 halting for investigation');\nconst rec = (state.approvals ?? []).find(a => a.id === hint.approval_id);\nif (!rec || rec.gate !== gate || rec.row_hash !== hint.row_hash || rec.decision !== hint.decision) {\n  throw new Error('Decision not found in audit log or mismatched \u2014 refusing to act');\n}\nreturn [{ json: { decision: rec.decision, approval_id: rec.id, row_hash: rec.row_hash, gate,\n                  transaction_id: state.transaction.id, status: state.transaction.status,\n                  next_stage: state.transaction.stage } }];\n"
       }
     },
     {
@@ -523,7 +523,7 @@
         600
       ],
       "parameters": {
-        "errorMessage": "No confirmed human decision — workflow stopped without side effects."
+        "errorMessage": "No confirmed human decision \u2014 workflow stopped without side effects."
       }
     },
     {
@@ -650,6 +650,30 @@
           "id": "REPLACE_postgres_automation",
           "name": "Copilot Postgres (copilot_automation)"
         }
+      }
+    },
+    {
+      "id": "e30129bc-4a11-5374-8b1e-0a562efbdc12",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        800
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "7b0918ef-12cb-58a2-97fe-9e126a3108c3",
+      "name": "Format Error Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        800
+      ],
+      "parameters": {
+        "jsCode": "const exec = .first().json.execution ?? {};\nconst wf = .first().json.workflow ?? {};\nconst err = exec.error ?? {};\nreturn [{\n  json: {\n    event: 'WORKFLOW_ERROR',\n    workflow_id: wf.id,\n    workflow_name: wf.name,\n    execution_id: exec.id,\n    last_node: exec.lastNodeExecuted,\n    error_message: err.message || 'Unknown error',\n    timestamp: new Date().toISOString()\n  }\n}];"
       }
     }
   ],
@@ -898,6 +922,17 @@
           }
         ]
       ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -920,5 +955,6 @@
     {
       "name": "hitl"
     }
-  ]
+  ],
+  "versionId": "d0f3a612-4521-4890-a2ef-9cb4a5209e10"
 }

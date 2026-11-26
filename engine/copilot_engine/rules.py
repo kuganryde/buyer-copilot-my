@@ -15,10 +15,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 
 
-class RuleStatus(str, Enum):
+class RuleStatus(StrEnum):
     GAZETTED = "GAZETTED"  # in force by Act / P.U.(A) order
     PROPOSED_PENDING_GAZETTE = "PROPOSED_PENDING_GAZETTE"  # Budget speech only
     ESTIMATE = "ESTIMATE"  # market-practice estimate, not a statutory figure

@@ -33,7 +33,9 @@ def test_n8n_workflow_structure_and_no_embedded_secrets():
                 assert edge["node"] in names, edge
     types = {n["type"] for n in wf["nodes"]}
     assert {"n8n-nodes-base.webhook", "n8n-nodes-base.wait", "n8n-nodes-base.postgres",
-            "n8n-nodes-base.switch", "n8n-nodes-base.scheduleTrigger"} <= types
+            "n8n-nodes-base.switch", "n8n-nodes-base.scheduleTrigger",
+            "n8n-nodes-base.errorTrigger"} <= types
+    assert bool(wf.get("versionId")), "workflow must declare versionId"
     wait = next(n for n in wf["nodes"] if n["type"] == "n8n-nodes-base.wait")
     assert wait["parameters"]["resume"] == "webhook" and wait["parameters"]["incomingAuthentication"] == "headerAuth"
     for n in wf["nodes"]:

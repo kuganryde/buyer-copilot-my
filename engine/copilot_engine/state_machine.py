@@ -17,11 +17,11 @@ import hashlib
 import uuid
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class Gate(str, Enum):
+class Gate(StrEnum):
     HITL_1_LISTING_VETTING = "HITL_1_LISTING_VETTING"
     HITL_2_OFFER_BUDGET = "HITL_2_OFFER_BUDGET"
     HITL_3_LAWYER_DEPOSIT = "HITL_3_LAWYER_DEPOSIT"
@@ -55,14 +55,14 @@ GATE_DESCRIPTIONS: dict[Gate, dict[str, str]] = {
 }
 
 
-class Status(str, Enum):
+class Status(StrEnum):
     PAUSED_FOR_HITL = "PAUSED_FOR_HITL"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     HALTED = "HALTED"
 
 
-class Decision(str, Enum):
+class Decision(StrEnum):
     APPROVED = "APPROVED"
     CHANGES_REQUESTED = "CHANGES_REQUESTED"
     REJECTED = "REJECTED"

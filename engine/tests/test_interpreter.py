@@ -80,3 +80,24 @@ def test_restriction_wording_stops_at_line_end():
 def test_restriction_on_following_line_not_mistaken_for_none():
     out = parse_title_search("Sekatan Kepentingan: Tiada\nGadaian kepada MAYBANK")
     assert out["facts"]["has_restriction_in_interest"] is False
+
+
+def test_ollama_embed_and_explain(monkeypatch):
+    from copilot_engine.interpreter import ollama_embed, ollama_explain_clause
+
+    # Test graceful fallback on network error/unreachable server
+    assert ollama_embed("test text", base_url="http://127.0.0.1:9999", timeout=0.1) == []
+    assert ollama_explain_clause("test", base_url="http://127.0.0.1:9999", timeout=0.1) is None
+
+    # Test successful parsing with mock response
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return {"embedding": [0.1, 0.2, 0.3], "response": "Penjelasan klausa hakmilik"}
+
+    monkeypatch.setattr("httpx.post", lambda *args, **kwargs: FakeResponse())
+    vec = ollama_embed("test text")
+    assert len(vec) == 3 and vec[0] == 0.1
+    exp = ollama_explain_clause("test restriction", language="ms")
+    assert exp == "Penjelasan klausa hakmilik"

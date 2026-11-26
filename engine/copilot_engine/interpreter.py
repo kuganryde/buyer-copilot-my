@@ -11,6 +11,7 @@ Security notes:
 
 from __future__ import annotations
 
+import logging
 import math
 import re
 from collections import Counter
@@ -18,6 +19,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 from typing import Any, Protocol
+
+log = logging.getLogger("copilot.interpreter")
 
 MAX_DOC_CHARS = 200_000
 
@@ -204,6 +207,51 @@ class PgVectorRetriever:
 def glossary_passages() -> list[Passage]:
     return [Passage(f"glossary:{k}", f"{k} — {v['en']}", f"{v['explain_en']} {v['explain_ms']}")
             for k, v in GLOSSARY.items()]
+
+
+def ollama_embed(
+    text: str,
+    model: str = "nomic-embed-text",
+    base_url: str = "http://localhost:11434",
+    timeout: float = 5.0,
+) -> list[float]:
+    """Generate embeddings using local sovereign Ollama instance (e.g. nomic-embed-text / bge-m3)."""
+    import httpx
+    try:
+        url = f"{base_url.rstrip('/')}/api/embeddings"
+        resp = httpx.post(url, json={"model": model, "prompt": text[:2000]}, timeout=timeout)
+        if resp.status_code == 200:
+            vec = resp.json().get("embedding", [])
+            if isinstance(vec, list) and vec:
+                return [float(x) for x in vec]
+    except Exception as exc:
+        log.debug("Ollama embed request failed: %s", exc)
+    return []
+
+
+def ollama_explain_clause(
+    clause_text: str,
+    language: str = "en",
+    model: str = "qwen2.5:14b",
+    base_url: str = "http://localhost:11434",
+    timeout: float = 8.0,
+) -> str | None:
+    """Generate sovereign Malaysian conveyancing explanation using local Ollama model."""
+    import httpx
+    lang_str = "Bahasa Melayu" if language == "ms" else "English"
+    prompt = (
+        f"You are a Malaysian conveyancing assistant. In 1-2 concise sentences, explain this property title restriction "
+        f"in plain {lang_str}:\n{clause_text[:400]}"
+    )
+    try:
+        url = f"{base_url.rstrip('/')}/api/generate"
+        resp = httpx.post(url, json={"model": model, "prompt": prompt, "stream": False}, timeout=timeout)
+        if resp.status_code == 200:
+            res = resp.json().get("response", "").strip()
+            return res if res else None
+    except Exception as exc:
+        log.debug("Ollama explain request failed: %s", exc)
+    return None
 
 
 def explain(query: str, retriever: Retriever | None = None, k: int = 3) -> dict[str, Any]:

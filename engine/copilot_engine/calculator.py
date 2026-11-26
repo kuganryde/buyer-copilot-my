@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import date
 from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal, localcontext
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
 from .rules import ACTIVE_RULESET, Band, RuleSet, RuleStatus
@@ -23,7 +23,7 @@ CENT = Decimal("0.01")
 MAX_PRICE = Decimal("1000000000")  # RM1bn sanity ceiling — rejects fat-finger / overflow input
 
 
-class PropertyType(str, Enum):
+class PropertyType(StrEnum):
     RESIDENTIAL_HOUSE = "RESIDENTIAL_HOUSE"
     VACANT_LAND = "VACANT_LAND"  # vacant residential/building lot
     AGRICULTURAL_LAND = "AGRICULTURAL_LAND"
@@ -33,13 +33,13 @@ class PropertyType(str, Enum):
         return self is PropertyType.RESIDENTIAL_HOUSE
 
 
-class BuyerStatus(str, Enum):
+class BuyerStatus(StrEnum):
     CITIZEN = "CITIZEN"
     PERMANENT_RESIDENT = "PERMANENT_RESIDENT"
     NON_CITIZEN = "NON_CITIZEN"
 
 
-class Budget2027Mode(str, Enum):
+class Budget2027Mode(StrEnum):
     GAZETTED_ONLY = "GAZETTED_ONLY"
     SHOW_PROPOSED_SCENARIO = "SHOW_PROPOSED_SCENARIO"
 
