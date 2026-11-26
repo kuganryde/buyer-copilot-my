@@ -12,7 +12,7 @@ or files anything with LHDN, a Land Office or any other authority.
 ## Folder structure
 
 ```
-buyer-copilot/
+./
 ├── .env.example                 # every variable, with how to generate secrets
 ├── docker-compose.yml           # postgres(pgvector) + engine + n8n + web, internal network
 ├── db/
@@ -135,7 +135,7 @@ exporter wiring; and a human pass to verify every directory URL and set `last_ve
 
 ### 1. Engine tests (no database needed)
 ```bash
-cd buyer-copilot/engine
+cd engine
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 ruff check copilot_engine tests && bandit -q -r copilot_engine -s B608
@@ -192,7 +192,7 @@ CI must be green before merge.
 
 ## CI/CD & deployment strategy
 
-`.github/workflows/buyer-copilot.yml` runs on every PR touching `buyer-copilot/`:
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request:
 
 1. **engine:** ruff (incl. security rules), bandit SAST, seed drift check, schema applied twice on a pgvector service, unit and RLS integration tests with an 85% coverage gate, pip-audit.
 2. **web:** `npm ci --ignore-scripts`, strict typecheck, production build, `npm audit`, CycloneDX SBOM artifact.
