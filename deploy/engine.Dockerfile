@@ -3,9 +3,9 @@
 FROM python:3.13-slim AS base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /app
-COPY engine/pyproject.toml ./
-RUN pip install --no-compile fastapi==0.115.12 pydantic==2.11.4 httpx==0.28.1 uvicorn==0.34.2 \
-      "psycopg[binary]==3.2.9" psycopg-pool==3.2.6
+# Single source of pins (same file CI audits).
+COPY engine/requirements.txt ./
+RUN pip install --no-compile -r requirements.txt
 COPY engine/copilot_engine ./copilot_engine
 COPY db/directory_seed.json ./db/directory_seed.json
 # Least privilege: non-root, read-only code.

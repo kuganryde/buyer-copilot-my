@@ -4,12 +4,13 @@ version = "0.1.0"
 description = "Malaysia no-agent property buyer co-pilot: deterministic cost engine, guardrails, HITL state machine"
 requires-python = ">=3.11"
 dependencies = [
-  "fastapi==0.115.12",
-  "pydantic==2.11.4",
+  "fastapi==0.162.5",
+  "starlette==1.10.0",
+  "pydantic==2.14.3",
   "httpx==0.28.1",
-  "uvicorn==0.34.2",
-  "psycopg[binary]==3.2.9",
-  "psycopg-pool==3.2.6",
+  "uvicorn==0.54.0",
+  "psycopg[binary]==3.3.8",
+  "psycopg-pool==3.3.3",
 ]
 
 [project.optional-dependencies]
