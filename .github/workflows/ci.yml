@@ -32,7 +32,7 @@ jobs:
       COPILOT_TEST_APP_DATABASE_URL: postgresql://copilot_it:ci@localhost:5432/copilot
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.13" }
       - name: Install (pinned)
         run: pip install -r requirements.txt && pip install -e ".[dev]"
