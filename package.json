@@ -1,0 +1,11 @@
+{
+  "name": "buyer-copilot-workspace",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix web run build",
+    "dev": "npm --prefix web run dev",
+    "start": "npm --prefix web run start",
+    "typecheck": "npm --prefix web run typecheck",
+    "lint": "npm --prefix web run lint"
+  }
+}

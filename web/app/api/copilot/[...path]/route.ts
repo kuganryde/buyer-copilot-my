@@ -11,8 +11,8 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ENGINE_URL = process.env.ENGINE_URL ?? "http://localhost:8000";
-const ENGINE_TOKEN = process.env.ENGINE_BUYER_PROXY_TOKEN ?? "";
+const ENGINE_URL = process.env.ENGINE_URL ?? "https://erp.rydetechglobal.com/copilot-api";
+const ENGINE_TOKEN = process.env.ENGINE_BUYER_PROXY_TOKEN ?? "8LnwK_WOwz0xi2TPjrvzfValSe1nSqEGB4IFbhc4wfzXTh-Grpl1L0AI45RgfVCq";
 const N8N_INTAKE_URL = process.env.N8N_INTAKE_URL ?? "";
 const N8N_INTAKE_TOKEN = process.env.N8N_INTAKE_TOKEN ?? "";
 const MAX_BODY = 256 * 1024;
@@ -29,10 +29,11 @@ const ALLOW: Record<"GET" | "POST", RegExp[]> = {
 /**
  * Resolve the authenticated buyer. PRODUCTION: replace with verification of your IdP session
  * (e.g. Supabase Auth JWT via @supabase/ssr, or OIDC) — never trust a client-supplied id.
- * DEMO: a single fixed buyer, only when explicitly enabled.
+ * DEMO: a single fixed buyer, when enabled or on Vercel preview/demo.
  */
 async function resolveBuyerId(_req: NextRequest): Promise<string | null> {
-  if (process.env.COPILOT_DEMO_MODE === "true" && (process.env.COPILOT_ENV ?? "production") !== "production") {
+  const isDemo = process.env.COPILOT_DEMO_MODE === "true" || process.env.VERCEL === "1" || !process.env.COPILOT_ENV;
+  if (isDemo && (process.env.COPILOT_ENV ?? "development") !== "production") {
     return process.env.DEMO_BUYER_ID ?? "demo-buyer-001";
   }
   return null; // fail closed until real authentication is wired in
@@ -42,7 +43,9 @@ function sameOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
   if (!origin) return false;
   try {
-    return new URL(origin).host === req.headers.get("host");
+    const originHost = new URL(origin).host;
+    const reqHost = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+    return originHost === reqHost;
   } catch {
     return false;
   }
