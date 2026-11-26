@@ -1,0 +1,38 @@
+name: Bug report
+description: Something isn't working as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for reporting. **Don't include real names, IC numbers, title numbers or bank details.**"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to Costs
+        2. Enter a price of 720000 and a valuation of 700000
+        3. Click "Calculate costs"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Approvals, Costs and stamp duty, Documents, Official sources, Engine API, Database, n8n workflow, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: money
+    attributes:
+      label: Does this affect a money figure?
+      options: ["No", "Yes — a cost or duty amount is wrong"]
+    validations:
+      required: true

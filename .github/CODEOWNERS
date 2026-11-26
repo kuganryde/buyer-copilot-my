@@ -1,0 +1,6 @@
+# Every change needs review from the owner. Rules and schema changes affect real money.
+*                                   @kuganryde
+/engine/copilot_engine/rules.py     @kuganryde
+/engine/copilot_engine/calculator.py @kuganryde
+/db/                                @kuganryde
+/.github/                           @kuganryde

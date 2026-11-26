@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest an improvement for buyers.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve for a buyer?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Ground rules
+      options:
+        - label: This keeps the buyer in control. It doesn't move money, sign, file or approve on their behalf.
+          required: true

@@ -1,0 +1,38 @@
+name: Cost or legal rule change
+description: A stamp duty rate, exemption, fee scale or legal requirement has changed or is wrong.
+labels: ["rule-change"]
+body:
+  - type: input
+    id: rule
+    attributes:
+      label: Which rule?
+      placeholder: e.g. First-time buyer exemption cap
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: What should it be?
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Official source (link)
+      description: Gazette (P.U.(A)), LHDN, Bar Council or other official page. Budget speeches alone count as proposals only.
+    validations:
+      required: true
+  - type: input
+    id: effective
+    attributes:
+      label: Effective date
+      placeholder: e.g. 1 January 2027
+    validations:
+      required: true
+  - type: dropdown
+    id: status
+    attributes:
+      label: Legal status
+      options: [Gazetted (in force), Proposed (not yet gazetted)]
+    validations:
+      required: true
