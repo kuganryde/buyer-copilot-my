@@ -65,3 +65,18 @@ def test_local_retriever_and_explain():
 
 def test_glossary_entries_bilingual():
     assert all({"en", "explain_en", "explain_ms"} <= set(v) for v in GLOSSARY.values())
+
+
+def test_restriction_wording_stops_at_line_end():
+    """Regression: a charge on the next line must not be read as part of the restriction."""
+    out = parse_title_search(
+        "Sekatan Kepentingan: Tidak boleh dipindah milik tanpa kebenaran Pihak Berkuasa Negeri\n"
+        "Gadaian kepada CIMB BANK BERHAD"
+    )
+    assert out["facts"]["restriction_text"] == "Tidak boleh dipindah milik tanpa kebenaran Pihak Berkuasa Negeri"
+    assert out["facts"]["has_existing_charge"] is True
+
+
+def test_restriction_on_following_line_not_mistaken_for_none():
+    out = parse_title_search("Sekatan Kepentingan: Tiada\nGadaian kepada MAYBANK")
+    assert out["facts"]["has_restriction_in_interest"] is False

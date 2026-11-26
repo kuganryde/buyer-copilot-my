@@ -73,7 +73,7 @@ _PRESENCE = {
     "is_freehold": re.compile(r"\b(selama-?lamanya|kekal|freehold|in\s+perpetuity)\b", re.I),
     "is_leasehold": re.compile(r"\b(pajakan|leasehold)\b", re.I),
 }
-_RESTRICTION = re.compile(r"sekatan\s+kepentingan\s*[:\-]?\s*(.{0,240})", re.I | re.S)
+_RESTRICTION = re.compile(r"sekatan\s+kepentingan\s*[:\-]?[ \t]*([^\r\n]{0,240})", re.I)
 
 
 def parse_title_search(text: str) -> dict[str, Any]:
