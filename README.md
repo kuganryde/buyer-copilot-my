@@ -32,11 +32,33 @@ buyer-copilot/
 ├── n8n/workflow.json            # intake → vet → persist → pause (Wait) → verify → route; daily freshness job
 ├── web/                         # Next.js 16 / React 19
 │   ├── app/page.tsx             # ONE-PAGE Buyer Command Hub
+│   ├── CONTENT_GUIDE.md         # voice, copy patterns, fixed terminology (EN/BM)
 │   ├── app/api/copilot/[...path]/route.ts   # backend-for-frontend proxy (allowlist, CSRF, identity)
-│   └── lib/copilot.ts           # types, API client, i18n (EN/BM), money formatting without floats
+│   └── lib/copilot.ts           # types, API client, ALL user-facing copy (EN/BM), error mapping, money/date formatting
 ├── deploy/                      # Dockerfiles (non-root), DB role bootstrap
 └── scripts/gen_seed.py
 ```
+
+## Using the hub
+
+The Buyer Command Hub is one page in English or Bahasa Melayu, switched with **EN / BM** at the top right. It has four sections:
+
+| Section | What the buyer does there |
+|---|---|
+| **Your Approvals** | Sees which of the 5 steps they're on and what they're deciding. Reviews key cash figures and risks, then approves, requests changes or stops the purchase. **Must fix** risks block approval. Each **warning** must be ticked before approving, and the page says why Approve is disabled. Stopping a purchase needs an in-page confirmation. **Decision history** shows every decision with a check code, and a **Record intact** badge shows nothing was altered. |
+| **Cash and Stamp Duty** | Enters price, valuation and loan, then gets cash at signing, total cash needed and transfer stamp duty. Each cost shows when it's paid and whether it's **Set by law**, an **Estimate** or a **Proposal**. The Budget 2027 proposal appears only in a separate "Not law yet" box. |
+| **Documents** | Ticks off the documents for each step. Adding a file creates a fingerprint in the browser (files aren't uploaded). Pasting an official title search pulls out key facts, such as owner, tenure, lease end and bank charge, for the buyer to check. |
+| **Official Sources** | Government agencies and rules, filtered by topic and state. Each entry shows when someone last checked it. |
+
+The five steps the buyer approves:
+
+1. **Check the listing:** facts, risks and upfront cash, before ordering an official title search.
+2. **Set offer and budget:** search, site and valuation results, then offer price, loan and cash buffer.
+3. **Lawyer and deposit:** choose a lawyer; the deposit is held by the lawyer as stakeholder, with a written receipt.
+4. **Sign and pay duty:** go through the sale agreement (SPA), loan, State consent and stamp duty with the lawyer.
+5. **Transfer and keys:** confirm registration (Borang 14A), handover checklist and bill split, then close.
+
+All copy lives in `web/lib/copilot.ts`. Before changing any wording, read [`web/CONTENT_GUIDE.md`](web/CONTENT_GUIDE.md).
 
 ## Architecture (C4, condensed)
 
@@ -182,18 +204,26 @@ HITL cycle → manual production approval. Infrastructure (managed Postgres, sec
 in Terraform with OPA/Conftest policies, for example to forbid public DB endpoints and require
 encryption at rest.
 
-## Verification status (at commit time)
+## Verification status (as of 26 November 2026)
 
 - **Passing:** 85 engine tests, 93% coverage. This includes 4 integration tests against real
   PostgreSQL 16 under a non-superuser role. They prove the DB-computed hash chain verifies in Python,
   that stage skipping, approvals while a blocking flag is open, and audit edits or deletes are refused,
   and that buyers are isolated by row-level security.
 - **Passing:** ruff, bandit, strict `tsc`, `next build`.
-- **Passing:** a browser end-to-end run (Chromium) against the production build. The buyer creates a
-  transaction, automation opens HITL-1, Approve stays disabled until the warning is acknowledged, the
-  approval advances to HITL-2 with an intact audit chain, the calculator shows the Budget 2027
-  scenario, the directory filters by state, and there is no horizontal overflow at 390 px.
+- **Passing:** 20 browser checks (Chromium) against the production build, the real engine and
+  PostgreSQL. They cover:
+  - inline validation and success messages;
+  - Approve blocked by a must-fix risk, with the reason shown;
+  - the comment requirement for changes, and the correct singular/plural on the warning reason;
+  - approval advancing to step 2 with **Record intact**;
+  - the in-page reject confirmation, and that cancelling keeps the purchase open;
+  - no raw system codes on screen, and the valuation gap shown once;
+  - spelled-out dates and plain-language title-search labels;
+  - the BM translation, no horizontal overflow at 390 px, and no console errors.
 - **Not yet verified:** `workflow.json` passed structural tests but has not been imported into a
   live n8n. Docker images were not built locally (no Docker daemon); CI builds them.
-- **Directory:** all seeded entries show **UNVERIFIED**. The sandbox could not reach the
+- **Directory:** all seeded entries show **Not checked yet**. The sandbox could not reach the
   government sites, so no verification dates were invented.
+- **English only:** engine risk explanations, n8n's next-step items and directory summaries. BM copy
+  still needs a native-speaker review before launch (see `web/CONTENT_GUIDE.md`).
