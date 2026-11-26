@@ -1,0 +1,46 @@
+[project]
+name = "copilot-engine"
+version = "0.1.0"
+description = "Malaysia no-agent property buyer co-pilot: deterministic cost engine, guardrails, HITL state machine"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.115.12",
+  "pydantic==2.11.4",
+  "httpx==0.28.1",
+  "uvicorn==0.34.2",
+  "psycopg[binary]==3.2.9",
+  "psycopg-pool==3.2.6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.3.5", "pytest-cov==6.1.1", "ruff==0.11.9", "bandit==1.8.3", "pip-audit==2.9.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = ["integration: requires COPILOT_TEST_DATABASE_URL (PostgreSQL)"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "S", "UP"]
+ignore = ["E501", "S101"]  # S101: asserts are fine in tests; production code avoids them
+
+[tool.ruff.lint.per-file-ignores]
+# Reviewed suppressions (keep this list short and justified):
+#  B008 — FastAPI's documented `Depends()` default-argument idiom.
+#  S608 — f-strings splice only module-constant column lists (_TXN_COLS/_APR_COLS);
+#         every value is a bound %s parameter. Never interpolate user data into SQL.
+#  S603 — tests invoke our own script with sys.executable and fixed argv.
+"copilot_engine/api.py" = ["B008"]
+"copilot_engine/repository.py" = ["S608"]
+"tests/*" = ["S105", "S106", "S311", "S603"]
+
+[tool.coverage.run]
+source = ["copilot_engine"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true

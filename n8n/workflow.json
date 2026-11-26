@@ -1,0 +1,924 @@
+{
+  "name": "MY Buyer Co-Pilot — HITL State Machine",
+  "nodes": [
+    {
+      "id": "fcfcdb45-3cb1-5302-91aa-ae7c8e1efba8",
+      "name": "Intake Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "buyer-copilot/intake",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "responseCode": 202,
+        "options": {
+          "rawBody": false
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_intake_token",
+          "name": "Copilot Intake Token"
+        }
+      },
+      "webhookId": "ab3e6447-a8ca-5c2f-96a6-f39cbf1d4fba"
+    },
+    {
+      "id": "33910622-ff76-58ee-9f6b-d5c0035399d2",
+      "name": "Validate Intake",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\n// Untrusted input boundary: validate shape before anything touches the engine or DB.\nconst b = $input.first().json.body ?? {};\nconst UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!UUID.test(String(b.transaction_id ?? ''))) throw new Error('invalid transaction_id');\nif (typeof b.facts !== 'object' || typeof b.purchase !== 'object') throw new Error('facts and purchase are required');\nif (JSON.stringify(b).length > 100000) throw new Error('payload too large');\nreturn [{ json: { transaction_id: b.transaction_id, facts: b.facts, purchase: b.purchase } }];\n"
+      }
+    },
+    {
+      "id": "d1a7f234-9fbb-565e-8582-2f380105e020",
+      "name": "Load Transaction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=http://engine:8000/v1/transactions/{{ $json.transaction_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 10000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_engine_service_token",
+          "name": "Copilot Engine Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "54d32052-c7c9-5dd3-9f0e-d7dd5cf2b1fe",
+      "name": "Assert In Progress",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "f2209690-4a44-446e-9559-d96f5d7ebfff",
+              "leftValue": "={{ $json.transaction.status }}",
+              "rightValue": "IN_PROGRESS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "335d73d8-57cb-5a47-9d9a-07a51014e862",
+      "name": "Guardrails & Cost Engine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=http://engine:8000/v1/vet",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 10000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ facts: $('Validate Intake').item.json.facts, purchase: $('Validate Intake').item.json.purchase }) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_engine_service_token",
+          "name": "Copilot Engine Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "dbbb8bc5-6b15-56b1-a86e-2ad5b709e8d1",
+      "name": "Build Gate Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        200
+      ],
+      "parameters": {
+        "jsCode": "\n// Plain-language card for the HITL console. Numbers are copied verbatim from the engine\n// (strings, exact decimals) — this node never does money arithmetic.\nconst txn = $('Load Transaction').item.json.transaction;\nconst vet = $input.first().json;\nconst NEXT = {\n  HITL_1_LISTING_VETTING: ['Order Official Title Search (Carian Rasmi)', 'Site visit: boundary, access, renovations', 'Request valuation'],\n  HITL_2_OFFER_BUDGET: ['Confirm loan pre-approval', 'Issue written offer subject to contract', 'Shortlist conveyancing lawyers'],\n  HITL_3_LAWYER_DEPOSIT: ['Appoint lawyer (check practising certificate)', 'Pay deposit ONLY to lawyer client account as stakeholder', 'Obtain written receipt'],\n  HITL_4_SPA_LOAN_DUTY: ['Sign SPA & loan docs with lawyer', 'Stamp MOT and loan agreement via STAMPS', 'Track state consent / redemption'],\n  HITL_5_TRANSFER_HANDOVER: ['Confirm MOT (Borang 14A) registered', 'Vacant possession checklist & keys', 'Transfer utilities; settle apportionments'],\n};\nreturn [{ json: {\n  transaction_id: txn.id, gate: txn.stage, version: txn.version,\n  summary: {\n    headline: vet.blocking ? 'Blocking risks must be resolved before you can approve.' : 'Ready for your review.',\n    ruleset_version: vet.cost.ruleset_version,\n    cash_at_signing: vet.cost.cash_at_signing,\n    total_cash_to_completion: vet.cost.total_cash_to_completion,\n    mot_duty: vet.cost.mot_duty, loan_duty: vet.cost.loan_duty,\n    exemption_applied: vet.cost.exemption_applied,\n    proposed_scenario: vet.cost.proposed_scenario,\n    line_items: vet.cost.line_items,\n    next_actions: NEXT[txn.stage] ?? [],\n    disclaimer: vet.disclaimer,\n  },\n  flags: vet.flags.map(f => ({ code: String(f.code), severity: String(f.severity), title_en: String(f.title_en ?? ''),\n    title_ms: String(f.title_ms ?? ''), message: String(f.message ?? ''), next_step: String(f.next_step ?? '') })),\n} }];\n"
+      }
+    },
+    {
+      "id": "f67abd39-ff4e-5bf2-a865-a0e882f22896",
+      "name": "Persist Gate Snapshot",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        200
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_events (transaction_id, gate, event_type, payload, n8n_execution_id) VALUES ($1::uuid, $2::hitl_gate, 'GATE_OPENED', $3::jsonb, $4)",
+        "options": {
+          "queryReplacement": "={{ [$json.transaction_id, $json.gate, JSON.stringify({summary: $json.summary, flags: $json.flags}), $execution.id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_postgres_automation",
+          "name": "Copilot Postgres (copilot_automation)"
+        }
+      }
+    },
+    {
+      "id": "865a581b-4af3-54fe-b4f3-94b61ea10faa",
+      "name": "Open HITL Gate (Pause)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=http://engine:8000/v1/transactions/{{ $('Build Gate Summary').item.json.transaction_id }}/gate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 10000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ gate: $('Build Gate Summary').item.json.gate, summary: $('Build Gate Summary').item.json.summary, flags: $('Build Gate Summary').item.json.flags, resume_url: $execution.resumeUrl }) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_engine_service_token",
+          "name": "Copilot Engine Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "bcfb0fca-5135-545c-8c2a-778c4db03705",
+      "name": "Wait for Human Decision",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        200
+      ],
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "incomingAuthentication": "headerAuth",
+        "limitWaitTime": true,
+        "limitType": "afterTimeInterval",
+        "resumeAmount": 30,
+        "resumeUnit": "days",
+        "responseCode": 200,
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_resume_token",
+          "name": "Copilot Resume Token"
+        }
+      },
+      "webhookId": "dcc4222c-50d3-508c-a280-73b6672e2ff7"
+    },
+    {
+      "id": "634c82da-3865-5048-a136-e353a27a700b",
+      "name": "Re-load Transaction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        200
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=http://engine:8000/v1/transactions/{{ $('Build Gate Summary').item.json.transaction_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 10000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_engine_service_token",
+          "name": "Copilot Engine Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "9fb6a00d-f4d1-50ad-8329-f59c0e3527bb",
+      "name": "Confirm Decision Against Audit Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        200
+      ],
+      "parameters": {
+        "jsCode": "\n// Zero trust: the resume webhook payload is only a hint. The decision is accepted only if\n// the engine/DB holds a matching, hash-chain-valid approval record for this gate.\nconst hint = $('Wait for Human Decision').item.json.body ?? {};\nconst state = $input.first().json;\nconst gate = $('Build Gate Summary').item.json.gate;\nif (!hint.approval_id) {\n  // Timed out after 30 days with no human decision: do nothing automatically.\n  return [{ json: { decision: 'TIMEOUT', transaction_id: state.transaction?.id, gate } }];\n}\nif (!state.audit_chain_valid) throw new Error('AUDIT CHAIN INVALID — halting for investigation');\nconst rec = (state.approvals ?? []).find(a => a.id === hint.approval_id);\nif (!rec || rec.gate !== gate || rec.row_hash !== hint.row_hash || rec.decision !== hint.decision) {\n  throw new Error('Decision not found in audit log or mismatched — refusing to act');\n}\nreturn [{ json: { decision: rec.decision, approval_id: rec.id, row_hash: rec.row_hash, gate,\n                  transaction_id: state.transaction.id, status: state.transaction.status,\n                  next_stage: state.transaction.stage } }];\n"
+      }
+    },
+    {
+      "id": "7230877a-7918-57ea-98bf-0c3b5384cd55",
+      "name": "Decision Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2420,
+        200
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "eac3fe37-51a4-45d1-bc50-1f3a036ddf78",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "APPROVED",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "APPROVED"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "a79a0891-85d4-4aaa-912d-3aa3393259ee",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "CHANGES_REQUESTED",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CHANGES_REQUESTED"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "ec3be3f7-f259-403e-adc8-dc542ca71ad4",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "REJECTED",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "REJECTED"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "TIMEOUT_OR_UNKNOWN"
+        }
+      }
+    },
+    {
+      "id": "1be0e446-39cb-5c5c-b7f1-161db0e70c87",
+      "name": "Log Approval",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2680,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_events (transaction_id, gate, event_type, payload, n8n_execution_id) VALUES ($1::uuid, $2::hitl_gate, $3, $4::jsonb, $5)",
+        "options": {
+          "queryReplacement": "={{ [$json.transaction_id, $json.gate, $json.status === 'COMPLETED' ? 'WORKFLOW_COMPLETED' : 'DECISION_CONFIRMED', JSON.stringify({decision: $json.decision, approval_id: $json.approval_id, row_hash: $json.row_hash, next_stage: $json.next_stage}), $execution.id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_postgres_automation",
+          "name": "Copilot Postgres (copilot_automation)"
+        }
+      }
+    },
+    {
+      "id": "4881b08c-293b-5b20-b4c6-9575f05365f3",
+      "name": "Completed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2900,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "a9ff42ca-24ce-4f5c-8d99-8b31a9283053",
+              "leftValue": "={{ $('Confirm Decision Against Audit Log').item.json.status }}",
+              "rightValue": "COMPLETED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "32ef1449-ccf6-5ef0-889c-7b13da384eaa",
+      "name": "Archive Transaction",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3120,
+        -100
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "a2a4f3b8-037f-52e0-be33-95be2e8b1b21",
+      "name": "Await Next-Gate Evidence",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3120,
+        100
+      ],
+      "parameters": {},
+      "notes": "Next gate re-enters via Intake Webhook once the buyer uploads the evidence it needs (title search, valuation, SPA, ...). The engine has already moved the transaction to the next stage."
+    },
+    {
+      "id": "948f89fe-0b65-5f33-91f5-2ae1148ca896",
+      "name": "Log Changes Requested",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2680,
+        200
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_events (transaction_id, gate, event_type, payload, n8n_execution_id) VALUES ($1::uuid, $2::hitl_gate, 'DECISION_CONFIRMED', $3::jsonb, $4)",
+        "options": {
+          "queryReplacement": "={{ [$json.transaction_id, $json.gate, JSON.stringify({decision: $json.decision, approval_id: $json.approval_id}), $execution.id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_postgres_automation",
+          "name": "Copilot Postgres (copilot_automation)"
+        }
+      }
+    },
+    {
+      "id": "417e77f0-0da5-5f0e-97dd-c5ceb933b88f",
+      "name": "Await Buyer Re-submission",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2900,
+        200
+      ],
+      "parameters": {},
+      "notes": "Transaction is IN_PROGRESS on the same gate; the corrected facts re-enter via Intake Webhook and re-pause."
+    },
+    {
+      "id": "4c6cd43c-53b1-5cc0-8a76-e01f259406a2",
+      "name": "Halt Transaction Log",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2680,
+        400
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_events (transaction_id, gate, event_type, payload, n8n_execution_id) VALUES ($1::uuid, $2::hitl_gate, 'WORKFLOW_HALTED', $3::jsonb, $4)",
+        "options": {
+          "queryReplacement": "={{ [$json.transaction_id, $json.gate, JSON.stringify({decision: $json.decision, approval_id: $json.approval_id}), $execution.id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_postgres_automation",
+          "name": "Copilot Postgres (copilot_automation)"
+        }
+      }
+    },
+    {
+      "id": "a5f8758e-8873-5561-beb7-a3ec2cc62964",
+      "name": "Timeout / Unknown: Stop",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        2680,
+        600
+      ],
+      "parameters": {
+        "errorMessage": "No confirmed human decision — workflow stopped without side effects."
+      }
+    },
+    {
+      "id": "d21dcd52-3391-5418-abdd-3dbc81a029f6",
+      "name": "Reject Non-Runnable State",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        880,
+        420
+      ],
+      "parameters": {
+        "errorMessage": "Transaction is not IN_PROGRESS (already paused, completed or halted)."
+      }
+    },
+    {
+      "id": "5bb9f925-28bc-5502-93b2-6a5737773589",
+      "name": "Daily Directory Freshness Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        800
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "17 2 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a895c021-8806-5a57-b0d9-306998362b71",
+      "name": "Find Stale Directory Entries",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        220,
+        800
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id::text, agency_name, category, jurisdiction_state, official_url, last_verified_date::text, freshness_status FROM directory_entries_v WHERE is_active AND freshness_status IN ('UNVERIFIED','STALE','PROPOSED_PENDING_GAZETTE') ORDER BY last_verified_date NULLS FIRST LIMIT $1",
+        "options": {
+          "queryReplacement": "={{ [500] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_postgres_automation",
+          "name": "Copilot Postgres (copilot_automation)"
+        }
+      }
+    },
+    {
+      "id": "cc77569f-d5ba-53be-b5f0-6bbf96b1369e",
+      "name": "Any Need Review?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        800
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "1fa01447-48c3-4603-990e-c90731418ca0",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "alwaysOutputData": false
+    },
+    {
+      "id": "52eb01d9-ec97-5451-b22c-f35e246b8bdf",
+      "name": "Build Review Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        800
+      ],
+      "parameters": {
+        "jsCode": "\n// A human must re-verify each source; automation never sets last_verified_date itself.\nconst rows = $input.all().map(i => i.json);\nconst by = s => rows.filter(r => r.freshness_status === s).map(r => `${r.agency_name} (${r.jurisdiction_state}) ${r.official_url}`);\nreturn [{ json: { count: rows.length, unverified: by('UNVERIFIED'), stale: by('STALE'),\n                  pending_gazette: by('PROPOSED_PENDING_GAZETTE'),\n                  instruction: 'Verify each source on the official site, then update last_verified_date and verified_by.' } }];\n"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "747d18d5-b197-5ce1-9281-c921709e0d5b",
+      "name": "Record Freshness Alert",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        880,
+        800
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_events (event_type, payload, n8n_execution_id) VALUES ('DIRECTORY_FRESHNESS_ALERT', $1::jsonb, $2)",
+        "options": {
+          "queryReplacement": "={{ [JSON.stringify($json), $execution.id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_postgres_automation",
+          "name": "Copilot Postgres (copilot_automation)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Intake Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Intake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Intake": {
+      "main": [
+        [
+          {
+            "node": "Load Transaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Transaction": {
+      "main": [
+        [
+          {
+            "node": "Assert In Progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assert In Progress": {
+      "main": [
+        [
+          {
+            "node": "Guardrails & Cost Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Non-Runnable State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardrails & Cost Engine": {
+      "main": [
+        [
+          {
+            "node": "Build Gate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Gate Summary": {
+      "main": [
+        [
+          {
+            "node": "Persist Gate Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Gate Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Open HITL Gate (Pause)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open HITL Gate (Pause)": {
+      "main": [
+        [
+          {
+            "node": "Wait for Human Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Human Decision": {
+      "main": [
+        [
+          {
+            "node": "Re-load Transaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-load Transaction": {
+      "main": [
+        [
+          {
+            "node": "Confirm Decision Against Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Decision Against Audit Log": {
+      "main": [
+        [
+          {
+            "node": "Decision Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision Router": {
+      "main": [
+        [
+          {
+            "node": "Log Approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Changes Requested",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Halt Transaction Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Timeout / Unknown: Stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Approval": {
+      "main": [
+        [
+          {
+            "node": "Completed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completed?": {
+      "main": [
+        [
+          {
+            "node": "Archive Transaction",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Await Next-Gate Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Changes Requested": {
+      "main": [
+        [
+          {
+            "node": "Await Buyer Re-submission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Directory Freshness Check": {
+      "main": [
+        [
+          {
+            "node": "Find Stale Directory Entries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Stale Directory Entries": {
+      "main": [
+        [
+          {
+            "node": "Any Need Review?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any Need Review?": {
+      "main": [
+        [
+          {
+            "node": "Build Review Digest",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Review Digest": {
+      "main": [
+        [
+          {
+            "node": "Record Freshness Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kuala_Lumpur",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "buyer-copilot"
+    },
+    {
+      "name": "hitl"
+    }
+  ]
+}

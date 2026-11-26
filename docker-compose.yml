@@ -1,0 +1,64 @@
+# Local / staging stack. Only `web` is published to the host; engine, n8n editor and Postgres
+# stay on the internal network (bind n8n's editor to localhost for workflow import).
+name: buyer-copilot
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: copilot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      COPILOT_APP_DB_PASSWORD: ${COPILOT_APP_DB_PASSWORD:?set in .env}
+      COPILOT_AUTOMATION_DB_PASSWORD: ${COPILOT_AUTOMATION_DB_PASSWORD:?set in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - ./deploy/db-roles.sh:/docker-entrypoint-initdb.d/03-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d copilot"]
+      interval: 5s
+      retries: 20
+    networks: [internal]
+
+  engine:
+    build: { context: ., dockerfile: deploy/engine.Dockerfile }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://copilot_app:${COPILOT_APP_DB_PASSWORD}@postgres:5432/copilot
+    depends_on: { postgres: { condition: service_healthy } }
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    networks: [internal]
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:${N8N_VERSION:?pin a reviewed n8n version in .env}
+    environment:
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set in .env}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Asia/Kuala_Lumpur}
+      WEBHOOK_URL: http://n8n:5678/
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_DATABASE: n8n   # separate database from transaction data
+      DB_POSTGRESDB_USER: postgres
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+    ports: ["127.0.0.1:5678:5678"]   # editor reachable from this machine only
+    volumes: [n8ndata:/home/node/.n8n]
+    depends_on: { postgres: { condition: service_healthy } }
+    networks: [internal]
+
+  web:
+    build: { context: ., dockerfile: deploy/web.Dockerfile }
+    env_file: .env
+    ports: ["127.0.0.1:3100:3100"]
+    depends_on: [engine]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    networks: [internal]
+
+volumes: { pgdata: {}, n8ndata: {} }
+networks: { internal: {} }

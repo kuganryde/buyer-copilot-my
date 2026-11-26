@@ -1,0 +1,6 @@
+# Root .gitignore ignores .env* — re-include the template (it holds no secrets).
+!.env.example
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
