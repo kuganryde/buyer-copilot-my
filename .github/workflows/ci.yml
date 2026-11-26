@@ -52,7 +52,7 @@ jobs:
         run: pytest --cov --cov-report=term --cov-report=xml
       - name: Dependency audit (OSV/PyPI advisories)
         run: pip-audit --strict -r requirements.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: engine-coverage, path: engine/coverage.xml }
 
   web:
@@ -73,7 +73,7 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: SBOM (CycloneDX)
         run: npm sbom --sbom-format cyclonedx --omit dev > sbom-web.cdx.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: web-sbom, path: web/sbom-web.cdx.json }
 
   workflow-and-images:
