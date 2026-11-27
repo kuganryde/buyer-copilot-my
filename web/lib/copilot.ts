@@ -272,8 +272,55 @@ export const DOCS_BY_GATE: Record<GateCode, { key: string; en: string; ms: strin
 export const T = {
   en: {
     appTitle: "Buyer Co-Pilot",
-    appSub: "Buy land or a house directly from the owner, safely",
+    appSub: "Direct-from-owner property purchases, protected at every step",
+    brandTagline: "Buy direct. Decide with confidence.",
     langGroup: "Language", langEn: "English", langMs: "Bahasa Melayu",
+    skipLink: "Skip to main content",
+    navAria: "Main sections",
+
+    // Splash
+    splashLoading: "Preparing your secure workspace",
+    splashSkip: "Skip intro",
+
+    // Hero
+    heroH1a: "Buy direct from the owner.",
+    heroH1b: "Approve every step",
+    heroH1c: "yourself.",
+    heroSub: "We check the title, work out exactly what you will pay and flag the risks in plain language. Nothing moves forward until you approve it.",
+    heroCtaPrimary: "Start a purchase",
+    heroCtaSecondary: "Estimate your costs",
+    heroCardLabel: "Example review",
+    heroRiskBlock: "Deposit requested in cash",
+    heroRiskWarn: "Bank loan registered on the title",
+    heroSealed: "Every decision is sealed with a check code.",
+    welcomeBack: "Welcome back",
+    welcomeBackSub: "Pick up where you left off. Your decision history is saved.",
+
+    // Sources marquee
+    marqueeLead: "Official sources we link you to",
+
+    // Protections
+    protectTitle: "Protection built into every step",
+    protectSub: "The checks a careful agent would make, without the commission and without taking the decision away from you.",
+    p1Title: "Exact costs",
+    p1Body: "Stamp duty, lawyer's fees, SST and the cash you need at signing. Calculated with exact decimal maths on the server, and every figure is marked Set by law, Estimate or Proposal.",
+    p2Title: "Fraud and title checks",
+    p2Body: "Cash hand-overs, a seller who isn't the registered owner, caveats, Malay Reserve land and short leases are flagged in plain words, each with a next step.",
+    p3Title: "Your approval, every time",
+    p3Body: "Five steps from checking the listing to receiving the keys. Approval stays locked while a must-fix risk is open.",
+    p4Title: "A record you can trust",
+    p4Body: "Every decision is sealed with a check code, so any later change to your history shows. Your files stay in your browser.",
+
+    // Process
+    processTitle: "Five steps. One decision at a time.",
+    processSub: "Each step ends with a review that only you can approve. Confirm legal points with your licensed lawyer.",
+
+    // Closing call to action and footer
+    ctaTitle: "Ready to review your first listing?",
+    ctaBody: "Start a purchase and we'll walk you through each decision.",
+    footerBy: "A product of",
+    footerContact: "Contact",
+    footerRights: "All rights reserved.",
     disclaimerLead: "General guidance, not legal advice.",
     disclaimer: "We explain costs and flag risks. We never move money, sign documents or file anything for you. Check every step with your lawyer.",
 
@@ -390,9 +437,50 @@ export const T = {
     errGeneric: "That didn't go through. Try again in a moment.",
   },
   ms: {
-    appTitle: "Pembantu Pembeli",
-    appSub: "Beli tanah atau rumah terus daripada pemilik, dengan selamat",
+    appTitle: "Buyer Co-Pilot",
+    appSub: "Pembelian hartanah terus daripada pemilik, dilindungi pada setiap langkah",
+    brandTagline: "Beli terus. Putuskan dengan yakin.",
     langGroup: "Bahasa", langEn: "English", langMs: "Bahasa Melayu",
+    skipLink: "Langkau ke kandungan utama",
+    navAria: "Bahagian utama",
+
+    splashLoading: "Menyediakan ruang kerja selamat anda",
+    splashSkip: "Langkau pengenalan",
+
+    heroH1a: "Beli terus daripada pemilik.",
+    heroH1b: "Luluskan setiap langkah",
+    heroH1c: "sendiri.",
+    heroSub: "Kami menyemak hakmilik, mengira dengan tepat jumlah yang perlu anda bayar dan menandakan risiko dalam bahasa yang mudah. Tiada apa diteruskan sehingga anda meluluskannya.",
+    heroCtaPrimary: "Mula pembelian",
+    heroCtaSecondary: "Anggarkan kos anda",
+    heroCardLabel: "Contoh semakan",
+    heroRiskBlock: "Deposit diminta secara tunai",
+    heroRiskWarn: "Gadaian bank didaftarkan pada hakmilik",
+    heroSealed: "Setiap keputusan dimeterai dengan kod semakan.",
+    welcomeBack: "Selamat kembali",
+    welcomeBackSub: "Sambung di mana anda berhenti. Sejarah keputusan anda disimpan.",
+
+    marqueeLead: "Sumber rasmi yang kami pautkan untuk anda",
+
+    protectTitle: "Perlindungan dalam setiap langkah",
+    protectSub: "Semakan yang akan dibuat oleh ejen yang berhati-hati, tanpa komisen dan tanpa mengambil keputusan daripada anda.",
+    p1Title: "Kos yang tepat",
+    p1Body: "Duti setem, yuran peguam, SST dan tunai yang anda perlukan semasa tandatangan. Dikira dengan matematik perpuluhan tepat di pelayan, dan setiap angka ditanda Ditetapkan undang-undang, Anggaran atau Cadangan.",
+    p2Title: "Semakan penipuan dan hakmilik",
+    p2Body: "Penyerahan tunai, penjual yang bukan pemilik berdaftar, kaveat, Tanah Rizab Melayu dan pajakan pendek ditandakan dalam bahasa yang mudah, setiap satu dengan langkah seterusnya.",
+    p3Title: "Kelulusan anda, setiap kali",
+    p3Body: "Lima langkah daripada menyemak iklan hingga menerima kunci. Kelulusan kekal terkunci selagi ada risiko mesti-dibaiki.",
+    p4Title: "Rekod yang boleh dipercayai",
+    p4Body: "Setiap keputusan dimeterai dengan kod semakan, jadi sebarang perubahan kemudian pada sejarah anda akan kelihatan. Fail anda kekal dalam pelayar anda.",
+
+    processTitle: "Lima langkah. Satu keputusan pada satu masa.",
+    processSub: "Setiap langkah berakhir dengan semakan yang hanya anda boleh luluskan. Sahkan perkara undang-undang dengan peguam berlesen anda.",
+
+    ctaTitle: "Bersedia menyemak iklan pertama anda?",
+    ctaBody: "Mulakan pembelian dan kami akan membimbing anda pada setiap keputusan.",
+    footerBy: "Produk daripada",
+    footerContact: "Hubungi",
+    footerRights: "Hak cipta terpelihara.",
     disclaimerLead: "Panduan umum, bukan nasihat undang-undang.",
     disclaimer: "Kami menerangkan kos dan menandakan risiko. Kami tidak memindahkan wang, menandatangani dokumen atau memfailkan apa-apa bagi pihak anda. Sahkan setiap langkah dengan peguam anda.",
 

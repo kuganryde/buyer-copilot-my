@@ -14,9 +14,13 @@ import {
   GateCode, GATES, Lang, LINE_LABEL, LINE_NOTE, newIdempotencyKey, PAYABLE_LABEL, rm, SEVERITY_LABEL, STATE_LABEL,
   STATUS_LABEL, T, TENURE_LABEL, Transaction,
 } from "@/lib/copilot";
+import { Logo } from "@/components/brand";
+import { Icon, IconName } from "@/components/icons";
+import { ClosingCta, Hero, Process, Protections, SiteFooter, SourcesMarquee } from "@/components/sections";
+import { Splash } from "@/components/splash";
 
 const SEV_BADGE: Record<string, string> = { BLOCK: "b-block", WARN: "b-warn", INFO: "b-info" };
-const SEV_ICON: Record<string, string> = { BLOCK: "✕", WARN: "!", INFO: "i" };
+const SEV_ICON: Record<string, IconName> = { BLOCK: "x", WARN: "alert", INFO: "info" };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function safeGet(key: string): string | null {
@@ -26,10 +30,31 @@ function safeSet(key: string, value: string): void {
   try { window.localStorage.setItem(key, value); } catch { /* private mode: convenience only */ }
 }
 
+/** Section heading with an icon chip. Presentational only. */
+function SectionHead({ id, icon, title, sub, children }: {
+  id: string; icon: IconName; title: string; sub: string; children?: React.ReactNode;
+}) {
+  return (
+    <div className="section-head">
+      <div className="section-title">
+        <span className="section-icon" aria-hidden="true"><Icon name={icon} size={22} /></span>
+        <div>
+          <h2 id={id}>{title}</h2>
+          <p>{sub}</p>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function BuyerCommandHub() {
   const [lang, setLang] = useState<Lang>("en");
   const t: Dict = T[lang];
   const [txnId, setTxnId] = useState<string | null>(null);
+  // Decided once on load. Deliberately NOT derived from txnId: starting a purchase must not collapse
+  // the page the user is standing on and make the console jump.
+  const [returning, setReturning] = useState(false);
   const [stage, setStage] = useState<GateCode>("HITL_1_LISTING_VETTING");
   const [ruleset, setRuleset] = useState<string>("");
 
@@ -37,49 +62,66 @@ export default function BuyerCommandHub() {
     const saved = safeGet("copilot.lang");
     if (saved === "ms" || saved === "en") setLang(saved);
     const fromUrl = new URLSearchParams(window.location.search).get("txn");
-    setTxnId(fromUrl ?? safeGet("copilot.txn"));
+    const initial = fromUrl ?? safeGet("copilot.txn");
+    setTxnId(initial);
+    setReturning(Boolean(initial));
   }, []);
   useEffect(() => { document.documentElement.lang = lang; safeSet("copilot.lang", lang); }, [lang]);
 
   return (
     <>
-      <header className="topbar">
-        <div className="topbar-inner">
-          <div className="brand">
-            <h1>{t.appTitle}</h1>
-            <small>{t.appSub}</small>
-          </div>
-          <div className="toolbar">
-            <div className="seg" role="group" aria-label={t.langGroup}>
-              <button type="button" aria-pressed={lang === "en"} aria-label={t.langEn} lang="en" onClick={() => setLang("en")}>EN</button>
-              <button type="button" aria-pressed={lang === "ms"} aria-label={t.langMs} lang="ms" onClick={() => setLang("ms")}>BM</button>
+      <Splash appTitle={t.appTitle} tagline={t.brandTagline} loading={t.splashLoading} skip={t.splashSkip} />
+      <div id="app-root">
+        <a className="skip-link" href="#main">{t.skipLink}</a>
+        <header className="topbar">
+          <div className="topbar-inner wrap">
+            <a className="brand" href="#main" aria-label={t.appTitle}>
+              <Logo title={t.appTitle} sub={t.brandTagline} />
+            </a>
+            <nav className="nav" aria-label={t.navAria}>
+              <a href="#console">{t.navConsole}</a>
+              <a href="#calculator">{t.navCalc}</a>
+              <a href="#vault">{t.navVault}</a>
+              <a href="#directory">{t.navDir}</a>
+            </nav>
+            <div className="toolbar">
+              <div className="seg" role="group" aria-label={t.langGroup}>
+                <button type="button" aria-pressed={lang === "en"} aria-label={t.langEn} lang="en" onClick={() => setLang("en")}>EN</button>
+                <button type="button" aria-pressed={lang === "ms"} aria-label={t.langMs} lang="ms" onClick={() => setLang("ms")}>BM</button>
+              </div>
             </div>
           </div>
-        </div>
-        <nav className="nav" aria-label={t.stepsLabel}>
-          <a href="#console">{t.navConsole}</a>
-          <a href="#calculator">{t.navCalc}</a>
-          <a href="#vault">{t.navVault}</a>
-          <a href="#directory">{t.navDir}</a>
-        </nav>
-      </header>
+        </header>
 
-      <main className="shell">
-        <div className="disclaimer" role="note">
-          <strong>{t.disclaimerLead}</strong> {t.disclaimer}
-        </div>
+        {/* overflow-x is clipped (not hidden) in CSS so position: sticky inside still works. */}
+        <main id="main" tabIndex={-1} className="page">
+          <Hero t={t} lang={lang} returning={returning} />
+          {!returning && (
+            <>
+              <SourcesMarquee t={t} />
+              <Protections t={t} />
+              <Process t={t} lang={lang} />
+            </>
+          )}
 
-        <ApprovalConsole lang={lang} t={t} txnId={txnId}
-                         onTxn={(id) => { setTxnId(id); safeSet("copilot.txn", id ?? ""); }} onStage={setStage} />
-        <CostCalculator lang={lang} t={t} onRuleset={setRuleset} />
-        <DocumentVault lang={lang} t={t} stage={stage} txnId={txnId} />
-        <Directory lang={lang} t={t} />
+          <div className="workspace wrap">
+            <div className="disclaimer" role="note">
+              <Icon name="info" size={20} />
+              <p><strong>{t.disclaimerLead}</strong> {t.disclaimer}</p>
+            </div>
 
-        <footer>
-          <p><strong>{t.disclaimerLead}</strong> {t.footer}</p>
-          {ruleset && <p className="mono">{fmt(t.rulesetNote, { v: ruleset })}</p>}
-        </footer>
-      </main>
+            <ApprovalConsole lang={lang} t={t} txnId={txnId}
+                             onTxn={(id) => { setTxnId(id); safeSet("copilot.txn", id ?? ""); }} onStage={setStage} />
+            <CostCalculator lang={lang} t={t} onRuleset={setRuleset} />
+            <DocumentVault lang={lang} t={t} stage={stage} txnId={txnId} />
+            <Directory lang={lang} t={t} />
+          </div>
+
+          {!returning && <ClosingCta t={t} />}
+        </main>
+
+        <SiteFooter t={t} ruleset={ruleset} />
+      </div>
     </>
   );
 }
@@ -170,19 +212,14 @@ function ApprovalConsole({ lang, t, txnId, onTxn, onStage }: {
 
   return (
     <section id="console" className="section" aria-labelledby="console-h">
-      <div className="section-head">
-        <div>
-          <h2 id="console-h">{t.consoleTitle}</h2>
-          <p>{t.consoleSub}</p>
-        </div>
-      </div>
+      <SectionHead id="console-h" icon="check" title={t.consoleTitle} sub={t.consoleSub} />
 
       <ol className="stepper" aria-label={t.stepsLabel}>
         {GATES.map((g, i) => {
           const s = stepState(i);
           return (
             <li key={g} className="step" data-state={s} aria-current={s === "current" ? "step" : undefined}>
-              <span className="step-n" aria-hidden="true">{s === "done" ? "✓" : i + 1}</span>
+              <span className="step-n" aria-hidden="true">{s === "done" ? <Icon name="check" size={13} strokeWidth={3} /> : i + 1}</span>
               <b>{GATE_LABEL[g][lang]}</b>
               <span className="sr-only">, {stepSr[s]}</span>
             </li>
@@ -191,8 +228,8 @@ function ApprovalConsole({ lang, t, txnId, onTxn, onStage }: {
       </ol>
 
       <div aria-live="polite">
-        {error && <div className="alert alert-block" role="alert">{error}</div>}
-        {success && !error && <div className="alert alert-ok" role="status">✓ {success}</div>}
+        {error && <div className="alert alert-block" role="alert"><Icon name="alert" size={18} /><span>{error}</span></div>}
+        {success && !error && <div className="alert alert-ok" role="status"><Icon name="check" size={18} strokeWidth={2.4} /><span>{success}</span></div>}
       </div>
 
       {!txn ? (
@@ -302,7 +339,7 @@ function ApprovalConsole({ lang, t, txnId, onTxn, onStage }: {
               </p>
             )}
             <div className="actions">
-              <button type="button" onClick={() => { setSuccess(null); setError(null); void load(txn.id); }} disabled={busy}>{t.refresh}</button>
+              <button type="button" onClick={() => { setSuccess(null); setError(null); void load(txn.id); }} disabled={busy}><Icon name="refresh" size={16} />{t.refresh}</button>
               <button type="button" className="btn-link" onClick={() => { onTxn(null); setTxn(null); setSuccess(null); setError(null); }}>{t.switchTxn}</button>
             </div>
           </div>
@@ -311,12 +348,12 @@ function ApprovalConsole({ lang, t, txnId, onTxn, onStage }: {
             <div className="section-head" style={{ marginBottom: 4 }}>
               <h3>{t.historyTitle}</h3>
               <span className={`badge ${chainValid ? "b-ok" : "b-block"}`} title={chainValid ? t.chainOkHint : t.chainBadHint}>
-                {chainValid ? "✓ " + t.chainOk : "✕ " + t.chainBad}
+                <Icon name={chainValid ? "seal" : "x"} size={14} strokeWidth={2.2} />{chainValid ? t.chainOk : t.chainBad}
               </span>
             </div>
             <p className={chainValid ? "hint" : "alert alert-block"}>{chainValid ? t.chainOkHint : t.chainBadHint}</p>
             {approvals.length === 0 ? <p className="empty">{t.historyEmpty}</p> : (
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0} role="region" aria-label={t.historyTitle}>
                 <table>
                   <thead><tr><th scope="col">{t.colStep}</th><th scope="col">{t.colDecision}</th><th scope="col">{t.colWhen}</th><th scope="col">{t.colCode}</th></tr></thead>
                   <tbody>
@@ -354,11 +391,11 @@ function FlagCard({ f, lang, children }: { f: Flag; lang: Lang; children?: React
   return (
     <div className="flag" data-sev={f.severity}>
       <span className={`badge ${SEV_BADGE[f.severity] ?? "b-neutral"}`}>
-        <span aria-hidden="true" className="badge-icon">{SEV_ICON[f.severity]}</span> {SEVERITY_LABEL[f.severity]?.[lang] ?? ""}
+        <Icon name={SEV_ICON[f.severity] ?? "info"} size={13} strokeWidth={2.4} />{SEVERITY_LABEL[f.severity]?.[lang] ?? ""}
       </span>{" "}
       <strong>{title}</strong>
       <p>{f.message}</p>
-      {f.next_step && <p className="next">→ {f.next_step}</p>}
+      {f.next_step && <p className="next"><Icon name="arrow" size={14} />{f.next_step}</p>}
       {children}
     </div>
   );
@@ -413,9 +450,7 @@ function CostCalculator({ lang, t, onRuleset }: { lang: Lang; t: Dict; onRuleset
 
   return (
     <section id="calculator" className="section" aria-labelledby="calc-h">
-      <div className="section-head">
-        <div><h2 id="calc-h">{t.calcTitle}</h2><p>{t.calcSub}</p></div>
-      </div>
+      <SectionHead id="calc-h" icon="calc" title={t.calcTitle} sub={t.calcSub} />
       <div className="grid-2">
         <form className="card" onSubmit={run} noValidate>
           <div className="grid-fields">
@@ -462,7 +497,7 @@ function CostCalculator({ lang, t, onRuleset }: { lang: Lang; t: Dict; onRuleset
         </form>
 
         <div className="card" aria-live="polite">
-          {err && <div className="alert alert-block" role="alert">{err}</div>}
+          {err && <div className="alert alert-block" role="alert"><Icon name="alert" size={18} /><span>{err}</span></div>}
           {!cost && !err && <p className="empty">{t.calcEmpty}</p>}
           {cost && (
             <>
@@ -472,11 +507,11 @@ function CostCalculator({ lang, t, onRuleset }: { lang: Lang; t: Dict; onRuleset
                 <div className="kpi"><span>{t.duty}</span><strong className="num">{rm(cost.mot_duty)}</strong></div>
               </div>
               {cost.exemption_applied && (
-                <p className="alert alert-ok">✓ {fmt(t.exemptOk, { from: rm(cost.mot_duty_before_relief), to: rm(cost.mot_duty) })}</p>
+                <p className="alert alert-ok"><Icon name="check" size={18} strokeWidth={2.4} /><span>{fmt(t.exemptOk, { from: rm(cost.mot_duty_before_relief), to: rm(cost.mot_duty) })}</span></p>
               )}
               {gap && <p className="alert alert-warn">{fmt(t.gapWarn, { gap: rm(gap) })}</p>}
               {cost.flags.filter((fl) => fl.code !== "VALUATION_GAP").map((fl) => <FlagCard key={fl.code} f={fl} lang={lang} />)}
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0} role="region" aria-label={t.calcTitle}>
                 <table>
                   <thead><tr><th scope="col">{t.colItem}</th><th scope="col">{t.colWhenPay}</th><th scope="col">{t.colBasis}</th><th scope="col" className="r">{t.colAmount}</th></tr></thead>
                   <tbody>
@@ -579,15 +614,14 @@ function DocumentVault({ lang, t, stage, txnId }: { lang: Lang; t: Dict; stage: 
 
   return (
     <section id="vault" className="section" aria-labelledby="vault-h">
-      <div className="section-head">
-        <div><h2 id="vault-h">{t.vaultTitle}</h2><p>{t.vaultSub}</p></div>
-        <div className="field" style={{ marginBottom: 0 }}>
+      <SectionHead id="vault-h" icon="doc" title={t.vaultTitle} sub={t.vaultSub}>
+        <div className="field field-inline">
           <label htmlFor="vault-step">{t.vaultStep}</label>
-          <select id="vault-step" value={gate} onChange={(e) => setGate(e.target.value as GateCode)} style={{ width: "auto" }}>
+          <select id="vault-step" value={gate} onChange={(e) => setGate(e.target.value as GateCode)}>
             {GATES.map((g, i) => <option key={g} value={g}>{i + 1}. {GATE_LABEL[g][lang]}</option>)}
           </select>
         </div>
-      </div>
+      </SectionHead>
       <div className="grid-2">
         <div className="card">
           <p className="eyebrow" aria-live="polite">{fmt(t.vaultCount, { n: count, total: docs.length })}</p>
@@ -604,7 +638,7 @@ function DocumentVault({ lang, t, stage, txnId }: { lang: Lang; t: Dict; stage: 
                   {name}
                 </label>
                 <label className="file-btn">
-                  {t.addFile}
+                  <Icon name="clip" size={15} />{t.addFile}
                   <input type="file" className="sr-only" aria-label={fmt(t.fileFor, { doc: name })} accept={ALLOWED_TYPES.join(",")}
                          onChange={(e) => fingerprint(d.key, e.target.files?.[0])} />
                 </label>
@@ -617,7 +651,7 @@ function DocumentVault({ lang, t, stage, txnId }: { lang: Lang; t: Dict; stage: 
         <form className="card" onSubmit={interpret}>
           <h3>{t.readTitle}</h3>
           <p className="muted">{t.readTitleBody}</p>
-          {err && <div className="alert alert-block" role="alert">{err}</div>}
+          {err && <div className="alert alert-block" role="alert"><Icon name="alert" size={18} /><span>{err}</span></div>}
           <div className="field">
             <label htmlFor="ts-text">{t.pasteLabel}</label>
             <textarea id="ts-text" value={text} maxLength={200000} onChange={(e) => setText(e.target.value)}
@@ -627,7 +661,7 @@ function DocumentVault({ lang, t, stage, txnId }: { lang: Lang; t: Dict; stage: 
           {facts && (
             <div aria-live="polite">
               <p className="alert alert-warn" role="status">{t.verifyFacts}</p>
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0} role="region" aria-label={t.readTitle}>
                 <table>
                   <tbody>
                     {Object.entries(facts.facts).map(([k, v]) => (
@@ -673,26 +707,25 @@ function Directory({ lang, t }: { lang: Lang; t: Dict }) {
 
   return (
     <section id="directory" className="section" aria-labelledby="dir-h">
-      <div className="section-head">
-        <div><h2 id="dir-h">{t.dirTitle}</h2><p>{t.dirSub}</p></div>
+      <SectionHead id="dir-h" icon="landmark" title={t.dirTitle} sub={t.dirSub}>
         <div className="toolbar">
-          <div className="field" style={{ marginBottom: 0 }}>
+          <div className="field field-inline">
             <label htmlFor="dir-cat">{t.filterCat}</label>
-            <select id="dir-cat" value={cat} onChange={(e) => setCat(e.target.value)} style={{ width: "auto" }}>
+            <select id="dir-cat" value={cat} onChange={(e) => setCat(e.target.value)}>
               <option value="">{t.allCats}</option>
               {Object.keys(CATEGORY_LABEL).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]![lang]}</option>)}
             </select>
           </div>
-          <div className="field" style={{ marginBottom: 0 }}>
+          <div className="field field-inline">
             <label htmlFor="dir-state">{t.filterState}</label>
-            <select id="dir-state" value={st} onChange={(e) => setSt(e.target.value)} style={{ width: "auto" }}>
+            <select id="dir-state" value={st} onChange={(e) => setSt(e.target.value)}>
               <option value="">{t.allStates}</option>
               {STATE_FILTERS.map((s) => <option key={s} value={s}>{STATE_LABEL[s]}</option>)}
             </select>
           </div>
         </div>
-      </div>
-      {err && <div className="alert alert-block" role="alert">{err}</div>}
+      </SectionHead>
+      {err && <div className="alert alert-block" role="alert"><Icon name="alert" size={18} /><span>{err}</span></div>}
       {rows && rows.length === 0 && <p className="empty">{t.dirEmpty}</p>}
       <div className="dir-list">
         {rows?.map((r) => {
@@ -711,7 +744,7 @@ function Directory({ lang, t }: { lang: Lang; t: Dict }) {
               </p>
               {/* rel=noopener noreferrer: no window.opener access, no referrer leak of transaction URLs */}
               <a href={r.official_url} target="_blank" rel="noopener noreferrer">
-                {fmt(t.visitSite, { host })} <span aria-hidden="true">↗</span><span className="sr-only"> {t.opensNewTab}</span>
+                {fmt(t.visitSite, { host })} <Icon name="external" size={15} /><span className="sr-only"> {t.opensNewTab}</span>
               </a>
             </article>
           );
