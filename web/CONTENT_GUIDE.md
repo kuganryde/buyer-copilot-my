@@ -54,3 +54,12 @@ English and a Bahasa Melayu version. No copy is hard-coded in components.
 - **Engine-generated risk messages** (`flag.message`, `flag.next_step`) and n8n's "After you approve" items are English only. Titles are bilingual. Next step: add `message_ms`/`next_step_ms` to `guardrails.py`, or key the copy by flag code here.
 - **Directory summaries** in `db/directory_seed.json` are English only.
 - **No readability scoring has been done** on the BM copy. Have a native speaker who knows conveyancing review it before launch.
+
+## Brand (added with the corporate redesign)
+
+- **Name:** "Buyer Co-Pilot" is the product name in both languages and is never translated. The Bahasa Melayu descriptor lives in `appSub`.
+- **Tagline:** "Buy direct. Decide with confidence." / "Beli terus. Putuskan dengan yakin."
+- **Company line:** "A product of RYDETECH GLOBAL ENTERPRISE" (proper noun, not translated).
+- **No fabricated proof.** No testimonials, partner logos or usage statistics. The sources marquee lists only agencies that exist in `db/directory_seed.json` and says "we link you to", never "partners".
+- **Illustrations are labelled.** The hero card is marked "Example review" and contains no real data.
+- **Native-speaker review is still outstanding** for the new BM copy (hero, protections, process, CTA).
