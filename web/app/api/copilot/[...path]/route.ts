@@ -12,7 +12,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ENGINE_URL = process.env.ENGINE_URL ?? "https://erp.rydetechglobal.com/copilot-api";
-const ENGINE_TOKEN = process.env.ENGINE_BUYER_PROXY_TOKEN ?? "8LnwK_WOwz0xi2TPjrvzfValSe1nSqEGB4IFbhc4wfzXTh-Grpl1L0AI45RgfVCq";
+// No fallback value, ever: a secret in source lives forever in git history. When this is unset the
+// proxy fails closed (401 "unauthenticated" in forward()) instead of calling the engine.
+const ENGINE_TOKEN = process.env.ENGINE_BUYER_PROXY_TOKEN ?? "";
 const N8N_INTAKE_URL = process.env.N8N_INTAKE_URL ?? "";
 const N8N_INTAKE_TOKEN = process.env.N8N_INTAKE_TOKEN ?? "";
 const MAX_BODY = 256 * 1024;
