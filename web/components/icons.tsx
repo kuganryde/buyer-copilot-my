@@ -1,4 +1,4 @@
-// Inline SVG icon set. Replaces the unicode glyphs (✕ ✓ ↗ →) used previously, which render
+// Inline SVG icon set. Replaces the unicode text glyphs used previously, which render
 // inconsistently across platforms and read as placeholder UI. Icons are decorative by default:
 // meaning is always carried by adjacent text (WCAG 1.4.1), so they are aria-hidden.
 // Inline (not an icon font / CDN) so the strict CSP (default-src 'self') is never loosened.

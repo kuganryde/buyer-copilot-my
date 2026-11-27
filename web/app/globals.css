@@ -130,7 +130,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary:hover:not(:disabled) { background: var(--primary); filter: brightness(1.14); }
 .btn-ghost { background: transparent; }
 .btn-lg { min-height: 54px; padding: 0 26px; font-size: 1rem; border-radius: 14px; }
-.btn-cta { background: #fff; border-color: #fff; color: var(--navy); }
+.btn-cta { background: var(--on-navy); border-color: var(--on-navy); color: var(--navy); }
 .btn-cta:hover { background: #e8f3f1; }
 .btn-danger { color: var(--block); border-color: var(--block); background: transparent; }
 .btn-danger-solid { background: var(--block); border-color: var(--block); color: #fff; }

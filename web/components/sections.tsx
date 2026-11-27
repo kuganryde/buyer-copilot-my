@@ -104,7 +104,7 @@ export function SourcesMarquee({ t }: { t: Dict }) {
         <p className="marquee-lead">{t.marqueeLead}</p>
       </div>
       <div className="marquee">
-        {/* One real list for assistive tech; the second copy exists only to make the loop seamless. */}
+        {/* One real list for assistive tech; the second copy exists only so the loop has no visible jump. */}
         <ul className="marquee-track">
           {SOURCES.map((s) => <li key={s}>{s}</li>)}
           {SOURCES.map((s) => <li key={`dup-${s}`} aria-hidden="true" className="marquee-dup">{s}</li>)}
