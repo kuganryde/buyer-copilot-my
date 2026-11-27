@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Dict, fmt, GATE_INTRO, GATE_LABEL, GATES, Lang, SEVERITY_LABEL, STATUS_LABEL } from "@/lib/copilot";
 import { COMPANY, Logo } from "./brand";
 import { Icon, IconName } from "./icons";
+import { CtaScene, DocumentScene, HeroScene } from "./illustrations";
 
 /* ---------------------------------------------------------------- Hero (Editorial Split) */
 
@@ -46,6 +47,7 @@ export function Hero({ t, lang, returning }: { t: Dict; lang: Lang; returning: b
               <a className="btn btn-ghost btn-lg" href="#calculator">{t.heroCtaSecondary}</a>
             </div>
             <p className="hero-tag">{t.brandTagline}</p>
+            <HeroScene className="hero-scene" />
           </div>
           <HeroCard t={t} lang={lang} />
         </div>
@@ -164,6 +166,7 @@ export function Process({ t, lang }: { t: Dict; lang: Lang }) {
           <h2 id="process-h" className="band-title">{t.processTitle}</h2>
           <p className="band-sub">{t.processSub}</p>
           <a className="btn btn-primary" href="#console">{t.heroCtaPrimary}<Icon name="arrow" size={18} /></a>
+          <DocumentScene className="process-scene" />
         </div>
         <ol className="process-list">
           {GATES.map((g, i) => (
@@ -189,11 +192,12 @@ export function ClosingCta({ t }: { t: Dict }) {
     <section className="cta" aria-labelledby="cta-h">
       <div className="cta-glow" aria-hidden="true" />
       <div className="wrap cta-inner">
-        <div>
+        <div className="cta-text">
           <h2 id="cta-h" className="cta-title">{t.ctaTitle}</h2>
           <p className="cta-body">{t.ctaBody}</p>
+          <a className="btn btn-cta btn-lg" href="#console">{t.heroCtaPrimary}<Icon name="arrow" size={18} /></a>
         </div>
-        <a className="btn btn-cta btn-lg" href="#console">{t.heroCtaPrimary}<Icon name="arrow" size={18} /></a>
+        <CtaScene className="cta-scene" />
       </div>
     </section>
   );
